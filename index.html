@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Günlük Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0F1B2D; --panel:#132540; --line:#2A3B52; --text:#EDEBE2; --dim:#8FA3BC;
+  --amber:#D9A441; --teal:#5FA8A0;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100%}
+header{padding:28px 20px 18px;border-bottom:1px solid var(--line)}
+header .tag{font-family:'IBM Plex Mono',monospace;color:var(--amber);font-size:13px;letter-spacing:.02em}
+header h1{margin:6px 0 4px;font-size:26px;font-weight:500;font-family:'IBM Plex Mono',monospace}
+header p{margin:0;color:var(--dim);font-size:14px;max-width:60ch;line-height:1.5}
+main{padding:18px 14px 60px;max-width:720px;margin:0 auto}
+.category{margin-top:22px;border:1px solid var(--line);border-radius:4px;background:var(--panel);overflow:hidden}
+.category summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:14px}
+.category summary::-webkit-details-marker{display:none}
+.category summary .n{color:var(--dim);font-size:12px}
+.category[open] summary{border-bottom:1px solid var(--line)}
+.category summary::after{content:'+';color:var(--amber);font-size:16px;margin-left:10px}
+.category[open] summary::after{content:'−'}
+ul{list-style:none;margin:0;padding:6px 0}
+li{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid rgba(42,59,82,.5)}
+li:last-child{border-bottom:none}
+li input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);flex:none}
+li a{color:var(--text);text-decoration:none;font-size:15px;flex:1;line-height:1.35}
+li a:hover{color:var(--amber)}
+li.done a{color:var(--dim);text-decoration:line-through}
+li .note{display:block;color:var(--dim);font-size:12px;margin-top:2px}
+footer{max-width:720px;margin:0 auto;padding:0 14px 40px;color:var(--dim);font-size:12px;line-height:1.6}
+</style>
+</head>
+<body>
+<header>
+  <div class="tag">// gunluk.panel</div>
+  <h1>Günlük Haber Paneli</h1>
+  <p>Teknoloji, ekonomi, siyaset, Türkiye, dünya ve EEE gündemi — tek yerde. Bir kaynağı okuyunca kutucuğu işaretle, panel hatırlar.</p>
+</header>
+<main id="app"></main>
+<footer>Bağlantılar orijinal kaynağa yeni sekmede açılır. Siyasi/gündem haberlerinde en az iki farklı kaynağı karşılaştırarak okumak iyi bir alışkanlıktır.</footer>
+
+<script>
+const DATA = [
+  {cat:"Elektrik-Elektronik Mühendisliği", items:[
+    {t:"IEEE Spectrum", u:"https://spectrum.ieee.org/", note:"Sektörün referans kaynağı, İngilizce"},
+    {t:"Webtekno", u:"https://www.webtekno.com/", note:"Türkçe teknoloji gündemi"},
+    {t:"Donanım Haber", u:"https://www.donanimhaber.com/", note:"Donanım + mühendislik odaklı"},
+    {t:"ShiftDelete", u:"https://www.shiftdelete.net/", note:"Türkçe teknoloji"},
+    {t:"Hacker News", u:"https://news.ycombinator.com/", note:"İleri seviye, donanım/yazılım kesişimi"},
+  ]},
+  {cat:"Ekonomi", items:[
+    {t:"Bloomberg HT", u:"https://www.bloomberght.com/", note:"Türkiye ekonomisi"},
+    {t:"Dünya Gazetesi", u:"https://www.dunya.com/", note:"Türkiye ekonomisi"},
+    {t:"Reuters — Business", u:"https://www.reuters.com/business/", note:"Global ekonomi, İngilizce"},
+  ]},
+  {cat:"Türkiye & Dünya & Siyaset", items:[
+    {t:"Anadolu Ajansı (AA)", u:"https://www.aa.com.tr/tr", note:"Kaynaklardan biri"},
+    {t:"Reuters", u:"https://www.reuters.com/", note:"Tarafsız haber ajansı, İngilizce"},
+    {t:"AP News", u:"https://apnews.com/", note:"Tarafsız haber ajansı, İngilizce"},
+  ]},
+];
+
+const app = document.getElementById('app');
+let read = {};
+try { read = JSON.parse(localStorage.getItem('panel-read') || '{}'); } catch(e) { read = {}; }
+
+function save(){
+  try { localStorage.setItem('panel-read', JSON.stringify(read)); } catch(e) {}
+}
+
+DATA.forEach((group, gi) => {
+  const det = document.createElement('details');
+  det.className = 'category';
+  det.open = true;
+  const sum = document.createElement('summary');
+  sum.innerHTML = `<span>${group.cat}</span><span class="n">${group.items.length} kaynak</span>`;
+  det.appendChild(sum);
+  const ul = document.createElement('ul');
+  group.items.forEach((item, ii) => {
+    const key = gi+'-'+ii;
+    const li = document.createElement('li');
+    if (read[key]) li.classList.add('done');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!read[key];
+    cb.addEventListener('change', () => {
+      read[key] = cb.checked;
+      li.classList.toggle('done', cb.checked);
+      save();
+    });
+    const a = document.createElement('a');
+    a.href = item.u; a.target = '_blank'; a.rel = 'noopener';
+    a.innerHTML = item.t + (item.note ? `<span class="note">${item.note}</span>` : '');
+    li.appendChild(cb); li.appendChild(a);
+    ul.appendChild(li);
+  });
+  det.appendChild(ul);
+  app.appendChild(det);
+});
+</script>
+</body>
+</html>
